@@ -1,107 +1,41 @@
 """
-Escriba el codigo que ejecute la accion solicitada en cada pregunta.
+Escriba el codigo que ejecute la accion solicitada en la pregunta.
 """
 
-# pylint: disable=import-outside-toplevel
-
-import os
 import pandas as pd
-import matplotlib.pyplot as plt
-from pathlib import Path
-
-
+import os
 
 def pregunta_01():
     """
-    Siga las instrucciones del video https://youtu.be/qVdwpxG_JpE para
-    generar el archivo `files/plots/news.png`.
+    Realice la limpieza del archivo "files/input/solicitudes_de_credito.csv".
+    El archivo tiene problemas como registros duplicados y datos faltantes.
+    Tenga en cuenta todas las verificaciones discutidas en clase para
+    realizar la limpieza de los datos.
 
-    Un ejemplo de la grafica final esta ubicado en la raíz de
-    este repo.
-
-    El gráfico debe salvarse al archivo `files/plots/news.png`.
+    El archivo limpio debe escribirse en "files/output/solicitudes_de_credito.csv"
 
     """
-    plt.Figure()
-
-    colors = {
-        "Television": "dimgray",
-        "Newspaper" : "grey",
-        "Internet"  : "tab:blue",
-        "Radio"     : "lightgrey"
-    }
-
-    zorder = {
-        'Television': 1,
-        'Newspaper' : 1,
-        'Internet'  : 2,
-        'Radio'     : 1,
-    }
-
-    linewidths = {
-        'Television': 2,
-        'Newspaper' : 2,
-        'Internet'  : 4,
-        'Radio'     : 2,
-    }
-
-    df = pd.read_csv("files/input/news.csv", sep = ",", index_col = 0)
-    for col in df.columns:
-        plt.plot(
-            df[col],
-            color = colors[col],
-            label = col,
-            zorder = zorder[col],
-            linewidth = linewidths[col],
-        )
     
-    plt.title("How people get their news", fontsize = 16)
-    plt.gca().spines["top"].set_visible(False)
-    plt.gca().spines["left"].set_visible(False)
-    plt.gca().spines["right"].set_visible(False)
-    plt.gca().axes.get_yaxis().set_visible(False)
+    df = pd.read_csv("files/input/solicitudes_de_credito.csv", sep = ";", index_col = 0) #? Se lee el archivo
+    
+    for column in df.select_dtypes(include = ["object"]).columns:                        #?Limpieza de los campos
+        df[column] = df[column].str.lower()
+        df[column] = df[column].str.replace("_", " ")
+        df[column] = df[column].str.replace("-", " ")
+        df[column] = df[column].str.replace(",", "")
+        df[column] = df[column].str.replace("$", "")
+        df[column] = df[column].str.replace(".00", "")
 
-    for col in df.columns:
-        first_year = df.index[0]
-        plt.scatter(
-            x = first_year,
-            y = df[col][first_year],
-            color = colors[col],
-            zorder = zorder[col],
-        )
+    df["monto_del_credito"] = df["monto_del_credito"].astype(float)                      #?pasar monto_del_credito a flotante
+    df["comuna_ciudadano"]  = df["comuna_ciudadano"].astype(int)                         #?Pasar comuna_ciudadano a entero 
+    df["fecha_de_beneficio"] = pd.to_datetime(df["fecha_de_beneficio"],                  #? oRGANIZAR LOS FORMATOS DE LA FECHAS     
+                                                    format = "%d/%m/%Y", errors = "coerce").combine_first(pd.to_datetime(df["fecha_de_beneficio"],
+                                                    format = "%Y/%m/%d", errors = "coerce"))
+    df = df.drop_duplicates()                                                            #? Sin duplicados en el dataframe
+    df = df.dropna()                                                                     #? Sin registros nulos
 
-        plt.text(
-            first_year - 0.2,
-            df[col][first_year],
-            col + " " + str(df[col][first_year]) + "%",
-            ha = "right",
-            va = "center",
-            color = colors[col],
-        )
+    os.makedirs("files/output", exist_ok = True)                                         #? Carpeta output ppara el test
 
-        last_year = df.index[-1]
-        plt.scatter(
-            x = last_year,
-            y = df[col][last_year],
-            color = colors[col],
-        )
-        
-        plt.text(
-            last_year + 0.2,
-            df[col][last_year],
-            str(df[col][last_year]) + "%",
-            ha = "left",
-            va = "center",
-            color = colors[col],
-        )
+    df.to_csv("files/output/solicitudes_de_credito.csv", columns = df.columns, index = False, encoding = "utf-8", sep = ";")
 
-        plt.xticks(
-            ticks = df.index,
-            labels = df.index,
-            ha = "center"
-        )
 
-        plt.tight_layout()
-        os.makedirs("files/plots", exist_ok = True)
-        plt.savefig("files/plots/news.png")
-        plt.show()
